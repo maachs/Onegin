@@ -1,81 +1,142 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <sys\stat.h>
+#include <assert.h>
+#include <TXlib.h>
 
-const int lines = 14, lines_len = 100;
-
-void SortText (char text[lines][lines_len]);
+void SortText (char** index, int str);
 
 int Compare_lines (const char* s1, const char* s2);
 
-void Swap(int* swap1, int* swap2);
+void Swap(char** swap1, char** swap2);
+
+void ScanText ();
+
+void PrintText(char** index, int nlines);
 
 int main()
 {
-    FILE* scan = fopen ("OneginText.txt", "r");
-    char text [lines][lines_len] = {};
-    for (int i = 0; i < lines; ++i) {
-        fgets(text[i],lines_len,scan);
-    }
-    //  printf ("1");
-    fclose (scan);
-    SortText(text);
+    ScanText();
 
     return 0;
 }
 
-void SortText (char text[lines][lines_len])
+void ScanText ()
 {
-    int index[lines] = {};
+    struct stat buffer = {};
+    stat("OneginText.txt", &buffer);//buffer.st_size unsigned long int
 
-    for (int n_lines = 0; n_lines < lines; n_lines++)
+    char *text = (char*) calloc(buffer.st_size, sizeof(char));
+
+    FILE* scan = fopen ("OneginText.txt", "rb");
+
+    assert(scan);
+
+    fread (text, buffer.st_size, 1, scan);
+
+    int nlines = 0;
+    for (int i = 0; i < buffer.st_size; i++)
     {
-        index[n_lines] = n_lines;
-            //printf ("2");
+        if (text[i] =='\r')
+        {
+            assert(text[i]);
+            text[i+1] = '\0';
+            text[i] = '\n';
+            nlines++;
+            //printf ("%d\n", text[i]);
+        }
+
     }
 
-    int nlines = lines - 1;
+    char** index = (char**)calloc(nlines, sizeof(char*));
+    int str = 1;
+    index[0] = text;
+    for (int j = 0; j < buffer.st_size; j++)
+    {
+        if (text[j] == '\0')
+        {
+            index[str] = &text[j] + 1;
+            str++;
+            //printf("%d\n", index[str]);
+        }
+    }
+
+    fclose(scan);
+
+    /*for (int ind = 0; ind < nlines; ind++)
+    {
+        printf ("%s\n", index[ind]);
+    }*/
+
+    SortText(index, nlines);
+    PrintText(index, nlines);
+}
+void PrintText(char** index, int nlines)
+{
+    for (int ind = 0; ind < nlines; ind++)
+    {
+        printf ("%s\n", index[ind]);
+    }
+}
+void SortText (char** index, int str)
+{
+    int nlines = str;
 
     while (nlines > 0)
     {
-        for (int i = 0; i < nlines; i++)
+        for (int i = 0; i < nlines - 1; i++)
         {
-            if (Compare_lines(text[index[i]], text[index[i + 1]]) > 0)
+            if (Compare_lines(index[i], index[i + 1]) > 0)
             {
+                //printf ("строка 1 %s\n строка 2 %s\n", index[i], index[i+1] );
                 Swap(&index[i], &index[i + 1]);
             }
         }
+        /*for (int ind = 0; ind < nlines; ind++)
+        {
+            printf ("%s\n", index[ind]);
+        }*/
         nlines--;
-    }
-
-
-    for (int ind = 0; ind < lines; ind++)
-    {
-        printf ("%s", text[index[ind]]);
     }
 }
 
 int Compare_lines (const char* s1, const char* s2)
 {
-    int i = 0;
+    int elem1 = 0, elem2 = 0;
+    //printf ("сравнение строка 1 %s\nсравнене строка 2 %s\n\n", s1, s2);
+    while (true)
+    {
+        while (isalpha(s1[elem1]) == 0)
+        {
+            elem1++;
+        }
+        while (isalpha(s2[elem2]) == 0)
+        {
+            elem2++;
+        }
 
-    while (i < lines_len && ((int) s1[i] == (int) s2[i]))
-    {
-        i++;
-    }
+        //if (isupper(s1[elem1]) == 0){s1[elem1] = (char)tolower(s1[elem1]);}
+        //if (isupper(s2[elem2]) == 0){s2[elem2] = (char)tolower(s2[elem2]);}
 
-    if (i == lines_len)
-    {
-        return 0;
+        if (tolower(s1[elem1]) != tolower(s2[elem2]))
+        {
+            return (tolower(s1[elem1]) - tolower(s2[elem2]));
+        }
+        else
+        {
+            elem1++;
+            elem2++;
+
+            continue;
+        }
     }
-    else
-    {
-        return ((int) s1[i] - (int) s2[i]);
-    }
+    return -1;
 }
 
-void Swap(int* swap1, int* swap2)
+void Swap(char** swap1, char** swap2)
 {
-    int a = *swap1;
+    char* a = *swap1;
     *swap1 = *swap2;
     *swap2 = a;
 }
