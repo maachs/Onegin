@@ -5,99 +5,123 @@
 #include <assert.h>
 #include <TXlib.h>
 
-void SortText (char** index, int str);
+struct Inftext
+{
+    int nlines;
+    char* text;
+    char** address;
+};
+
+void SortText (Inftext* onegin);
 
 int Compare_lines (const char* s1, const char* s2);
 
 void Swap(char** swap1, char** swap2);
 
-void ScanText ();
+void ScanText(Inftext* onegin, unsigned long size_f);
 
-void PrintText(char** index, int nlines);
+void PrintText(Inftext* onegin);
+
+void GetFileSize(Inftext* onegin, unsigned long size_f);
+// TODO struct with indeces, text, nlines
+// TODO string struct
 
 int main()
 {
-    ScanText();
+    struct Inftext onegin = {};
+    struct stat buffer = {};
+
+    stat("OneginText.txt", &buffer);//buffer.st_size unsigned long int
+
+    onegin.text = (char*) calloc(buffer.st_size, sizeof(char));
+
+    onegin.nlines = 0;
+
+    ScanText(&onegin, buffer.st_size);
+    onegin.address = (char**) calloc(onegin.nlines, sizeof(char*));
+
+    GetFileSize(&onegin, buffer.st_size);
+
+    SortText(&onegin);
+
+    PrintText(&onegin);
+
+    free(onegin.text);
+    free(onegin.address);
 
     return 0;
 }
 
-void ScanText ()
+void ScanText(Inftext* onegin, unsigned long size_f)
 {
-    struct stat buffer = {};
-    stat("OneginText.txt", &buffer);//buffer.st_size unsigned long int
-
-    char *text = (char*) calloc(buffer.st_size, sizeof(char));
-
     FILE* scan = fopen ("OneginText.txt", "rb");
 
-    assert(scan);
-
-    fread (text, buffer.st_size, 1, scan);
-
-    int nlines = 0;
-    for (int i = 0; i < buffer.st_size; i++)
+    if (scan == NULL)
     {
-        if (text[i] =='\r')
-        {
-            assert(text[i]);
-            text[i+1] = '\0';
-            text[i] = '\n';
-            nlines++;
-            //printf ("%d\n", text[i]);
-        }
-
+        printf("Error text");
+        exit(1);
     }
 
-    char** index = (char**)calloc(nlines, sizeof(char*));
-    int str = 1;
-    index[0] = text;
-    for (int j = 0; j < buffer.st_size; j++)
+    fread (onegin->text, size_f, 1, scan);
+
+    if (fread (onegin->text, size_f, 1, scan) == 1)
     {
-        if (text[j] == '\0')
+        printf("Error text");
+        exit(1);
+    }
+
+    for (unsigned int i = 0; i < size_f; i++)
+    {
+        if (onegin->text[i] =='\r')
         {
-            index[str] = &text[j] + 1;
+            onegin->text[i+1] = '\0';
+            onegin->text[i] = '\n';
+            (onegin->nlines)++;
+        }
+    }
+}
+
+void PrintText(Inftext* onegin)
+{
+    for (int ind = 0; ind < onegin->nlines; ind++)
+    {
+        printf ("%s\n", onegin->address[ind]);
+    }
+}
+
+void GetFileSize(Inftext* onegin, unsigned long size_f)
+{
+    int str = 1;
+    onegin->address[0] = onegin->text;
+    for (unsigned int j = 0; j < size_f; j++)
+    {
+        if (onegin->text[j] == '\0')
+        {
+            onegin->address[str] = &onegin->text[j] + 1;
             str++;
             //printf("%d\n", index[str]);
         }
     }
-
-    fclose(scan);
-
-    /*for (int ind = 0; ind < nlines; ind++)
-    {
-        printf ("%s\n", index[ind]);
-    }*/
-
-    SortText(index, nlines);
-    PrintText(index, nlines);
 }
-void PrintText(char** index, int nlines)
+void SortText (Inftext* onegin)
 {
-    for (int ind = 0; ind < nlines; ind++)
-    {
-        printf ("%s\n", index[ind]);
-    }
-}
-void SortText (char** index, int str)
-{
-    int nlines = str;
+    int str = onegin->nlines;
 
-    while (nlines > 0)
+    while (str > 0)
     {
-        for (int i = 0; i < nlines - 1; i++)
+        for (int i = 0; i < str - 1; i++)
         {
-            if (Compare_lines(index[i], index[i + 1]) > 0)
+            if (Compare_lines(onegin->address[i], onegin->address[i + 1]) > 0)
             {
                 //printf ("строка 1 %s\n строка 2 %s\n", index[i], index[i+1] );
-                Swap(&index[i], &index[i + 1]);
+                Swap(&onegin->address[i], &onegin->address[i + 1]);
             }
         }
         /*for (int ind = 0; ind < nlines; ind++)
         {
             printf ("%s\n", index[ind]);
         }*/
-        nlines--;
+        str--;
     }
 }
 
@@ -131,6 +155,7 @@ int Compare_lines (const char* s1, const char* s2)
             continue;
         }
     }
+
     return -1;
 }
 
