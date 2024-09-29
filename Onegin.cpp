@@ -5,164 +5,219 @@
 #include <assert.h>
 #include <TXlib.h>
 
-struct Sort
+#define TEXT "OneginText.txt"
+
+struct LineInfo
 {
     char* address;
     int lineslen;
 };
-struct Inftext
+
+struct TextInfo
 {
     int nlines;
     char* text;
-    Sort* addr;
+    LineInfo* addr;
 };
 
-void SortText (Inftext* onegin);
+enum ErrorCode
+{
+    Error = 1,
+    Ok = 0
+};
 
-int Compare_lines (const char* s1, const char* s2, int len1, int len2);
+ErrorCode QuickSort (TextInfo* text);
 
-//void Swap_addr(char** swap1, char** swap2);
+ErrorCode BubbleSort (TextInfo* text);
 
-void Swap(void* swap1, void* swap2, size_t size);
+int ReverseComparelines (const char* s1, const char* s2, int len1, int len2);
 
-void ScanText(Inftext* onegin, unsigned long size_f);
+int StraightComparelines (const char* s1, const char* s2, int len1, int len2);
 
-void PrintText(Inftext* onegin);
+int Comparelines (const char* s1, const char* s2, int len1, int len2);
 
-void GetFileSize(Inftext* onegin, unsigned long size_f);
+void Swap (void* swap1, void* swap2, size_t size);
 
-int comp (const void* s1, const void* s2);
+ErrorCode ScanText (TextInfo* text, unsigned long size_f);
+
+void PrintText (TextInfo* text);
+
+ErrorCode GetFileSize (TextInfo* text, unsigned long size_f);
+
+int CompareQSort (const void* s1, const void* s2);
+
+ErrorCode TextInfoDtor (void* remove);
+
+ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem, int size_elem );
+
+ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem, int size_elem);
 
 int main()
 {
-    struct Inftext onegin = {};
+    struct TextInfo text = {};
     struct stat buffer = {};
 
-    stat("OneginText.txt", &buffer);//buffer.st_size unsigned long int
+    stat(TEXT, &buffer);//buffer.st_size unsigned long int
 
-    onegin.text = (char*) calloc(buffer.st_size, sizeof(char));
+    InitTextInfo(&text, buffer.st_size, sizeof(char*));
 
-    onegin.nlines = 0;
+    ScanText(&text, buffer.st_size);
 
-    ScanText(&onegin, buffer.st_size);
-    onegin.addr = (Sort*) calloc(onegin.nlines, sizeof(Sort));
+    InitAddressInfo(&text, text.nlines, sizeof(LineInfo));
 
-    GetFileSize(&onegin, buffer.st_size);
+    GetFileSize(&text, buffer.st_size);
 
-    SortText(&onegin);
+    QuickSort(&text);
 
-    PrintText(&onegin);
+    PrintText(&text);
 
-    free(onegin.text);
-    free(onegin.addr);
+    TextInfoDtor(text.text);
+    TextInfoDtor(text.addr);
 
     return 0;
 }
-
-void ScanText(Inftext* onegin, unsigned long size_f)
+ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem, int size_elem)
 {
-    FILE* scan = fopen ("OneginText.txt", "rb");
+    text->text = (char*) calloc(elem, size_elem);
+    return Ok;
+}
 
-    if (scan == NULL)
+ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem, int size_elem)
+{
+    text->addr = (LineInfo*) calloc(elem, size_elem);
+    return Ok;
+}
+
+ErrorCode TextInfoDtor (void* remove)
+{
+    free(remove);
+    remove = NULL;
+    return Ok;
+}
+
+ErrorCode ScanText(TextInfo* text, unsigned long size_f)
+{
+    FILE* textfile = fopen (TEXT, "rb");
+
+    if (textfile== NULL)
     {
-        printf("Error text1");
-        exit(1);
+        printf("Cannot open file");
+        return Error;
     }
 
-    if (fread (onegin->text, size_f, 1, scan) == 0)
+    if (fread (text->text, size_f, 1, textfile) == 0)
     {
-        printf("Error text2");
-        exit(1);
+        printf("Cannot read file");
+        return Error;
     }
 
     for (unsigned int i = 0; i < size_f; i++)
     {
-        if ((onegin->text)[i] =='\r')
+        if ((text->text)[i] =='\r')
         {
-            (onegin->text)[i+1] = '\0';
-            (onegin->text)[i] = '\n';
-            onegin->nlines++;
+            (text->text)[i+1] = '\0';
+            (text->text)[i] = '\n';
+            text->nlines++;
         }
     }
+    return Ok;
 }
 
-void PrintText(Inftext* onegin)
+void PrintText(TextInfo* text)
 {
-    for (int ind = 0; ind < onegin->nlines; ind++)
+    for (int ind = 0; ind < text->nlines; ind++)
     {
-        printf ("%s\n", (onegin->addr)[ind].address);
+        printf ("%s\n", (text->addr)[ind].address);
     }
 }
 
-void GetFileSize(Inftext* onegin, unsigned long size_f)
+ErrorCode GetFileSize(TextInfo* text, unsigned long size_f)
 {
     int str = 1;
     int len = 0;
-    (onegin->addr)[0].address = onegin->text;
-    for (unsigned int j = 0; j < size_f; j++)
+    (text->addr)[0].address = text->text;
+    for (unsigned int elem = 0; elem < size_f; elem++)
     {
-        if (onegin->text[j] == '\0')
+        if (text->text[elem] == '\0')
         {
-            if (j + 1 == size_f)
+            if (elem + 1 == size_f)
             {
                 break;
             }
-            (onegin->addr)[str].address = &(onegin->text)[j] + 1;
-            (onegin->addr)[len].lineslen = (onegin->addr)[str].address - (onegin->addr)[str-1].address;
+            text->addr[str].address = &(text->text[elem]) + 1;
+            text->addr[len].lineslen = text->addr[str].address - text->addr[str-1].address;
 
-
-            //printf("%d\n", onegin->lineslen[len]);
             len++;
             str++;
-            //printf("%d\n", index[str]);
         }
     }
-    (onegin->addr)[onegin->nlines-1].lineslen = &(onegin->text)[size_f] - (onegin->addr)[onegin->nlines-1].address;
-
-    /*for (int i = 0; i < onegin->nlines; i++)
-    {
-        printf("numb line %d len %d\n", i, (onegin->addr)[i].lineslen);
-    }*/
+    (text->addr)[text->nlines-1].lineslen = &(text->text[size_f]) - text->addr[text->nlines-1].address;
+    return Ok;
 }
-void SortText (Inftext* onegin)
-{
-    //printf("1");
-    qsort(onegin->addr, onegin->nlines, sizeof(Sort), comp);//sort lines len to address
 
-    /*int str = onegin->nlines - 1;
+ErrorCode QuickSort (TextInfo* text)
+{
+    qsort(text->addr, text->nlines, sizeof(LineInfo), CompareQSort);
+
+    return Ok;
+}
+ErrorCode BubbleSort (TextInfo* text)
+{
+    int str = text->nlines - 1;
 
     while (str > 0)
     {
         for (int i = 0; i < str ; i++)
         {
-            if (Compare_lines(addr, (addr->address)[i], (addr->address)[i + 1], i) > 0)
+            if (ReverseComparelines((text->addr)[i].address, (text->addr)[i+1].address, (text->addr)[i].lineslen, (text->addr)[i+1].lineslen) > 0)
             {
-                //printf("swap 1 %s\nswap 2 %s\n", (addr->address)[i], (addr->address)[i + 1]);
-                Swap(&(addr->address)[i], &(addr->address)[i + 1], sizeof(char**));
-                Swap(&(addr->lineslen)[i], &(addr->lineslen)[i + 1], sizeof(int*));
+                Swap(&(text->addr)[i].address, &(text->addr)[i+1].address, sizeof(char**));
+                Swap(&(text->addr)[i].lineslen, &(text->addr)[i+1].lineslen, sizeof(int*));
             }
         }
-        for (int ind = 0; ind < onegin->nlines; ind++)
-        {
-            printf ("%s\n", onegin->address[ind]);
-        }
         str--;
-    }*/
-
+    }
+    return Ok;
 }
-
-int comp (const void* elem1, const void* elem2)
+int CompareQSort (const void* elem1, const void* elem2)
 {
-    return Compare_lines((((const Sort*)elem1)->address), (((const Sort*)elem2)->address),
-                         (((const Sort*)elem1)->lineslen), (((const Sort*)elem2)->lineslen));
+    return ReverseComparelines((((const LineInfo*)elem1)->address), (((const LineInfo*)elem2)->address),
+                         (((const LineInfo*)elem1)->lineslen), (((const LineInfo*)elem2)->lineslen));
 }
+int StraightComparelines (const char* s1, const char* s2, int len1, int len2)
+{
+     int elem1 = 0 , elem2 = 0;
 
-int Compare_lines (const char* s1, const char* s2, int len1, int len2)
+    while (elem1 >= len1 && elem2 >= len2)
+    {
+        while (isalpha(s1[elem1]) == 0)
+        {
+            elem1++;
+        }
+        while (isalpha(s2[elem2]) == 0)
+        {
+            elem2++;
+        }
+
+        if (tolower(s1[elem1]) != tolower(s2[elem2]))
+        {
+            return (tolower(s1[elem1]) - tolower(s2[elem2]));
+        }
+        else
+        {
+            elem1++;
+            elem2++;
+        }
+    }
+    if (elem1 < 0 && elem2 < 0)
+    {
+        return 0;
+    }
+    return elem1 - elem2;
+}
+int ReverseComparelines (const char* s1, const char* s2, int len1, int len2)
 {
     int elem1 = len1 - 1 , elem2 = len2 - 1;
-    //printf ("len1 %d\nlen2 %d\n", len1, len2);
-
-    //printf ("compare line 1 %s\ncompare line 2 %s\n\n", s1, s2);
 
     while (elem1 >= 0 && elem2 >= 0)
     {
@@ -177,8 +232,6 @@ int Compare_lines (const char* s1, const char* s2, int len1, int len2)
 
         if (tolower(s1[elem1]) != tolower(s2[elem2]))
         {
-            //printf("delta %d\n",tolower(s1[elem1]) - tolower(s2[elem2]) );
-            //printf("%c %d\n%c %d\n", s1[elem1], len1 - elem1 - 2, s2[elem2], len2-elem2 - 2);
             return (tolower(s1[elem1]) - tolower(s2[elem2]));
         }
         else
@@ -191,7 +244,6 @@ int Compare_lines (const char* s1, const char* s2, int len1, int len2)
     {
         return 0;
     }
-
     return elem1 - elem2;
 }
 
@@ -205,9 +257,3 @@ void Swap(void* swap1, void* swap2, size_t size)
     }
 }
 
-/*void Swap_len(int* swap1, int* swap2)
-{
-    int a = *swap1;
-    *swap1 = *swap2;
-    *swap2 = a;
-}*/
