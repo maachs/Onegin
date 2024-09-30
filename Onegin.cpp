@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <sys\stat.h>
+#include <sys/stat.h>
 #include <assert.h>
-#include <TXlib.h>
+//#include <TXlib.h> // TODO TXlib must be the first include (pls read TXlib docs)
+                     // TODO and why do you need TXlb?
 
-#define TEXT "OneginText.txt"
+#define TEXT "OneginText.txt" // TODO why define?
 
 struct LineInfo
 {
     char* address;
-    int lineslen;
+    int lineslen; // TODO you meant lines_len, didn't you?
 };
 
 struct TextInfo
@@ -22,7 +23,8 @@ struct TextInfo
 
 enum ErrorCode
 {
-    Error = 1,
+    Error = 1, // TODO usually OK = 0 when dealing with error codes. 
+               // (Because in that case you can write "if (error_code) { error }" instead of "if (error_code != 1) { error }")
     Ok = 0
 };
 
@@ -47,43 +49,56 @@ ErrorCode GetFileSize (TextInfo* text, unsigned long size_f);
 int CompareQSort (const void* s1, const void* s2);
 
 ErrorCode TextInfoDtor (void* remove);
-
+// TODO                                                  what's this? --------+
+//                                                                            |
+//                                                                           \/
 ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem, int size_elem );
 
 ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem, int size_elem);
 
 int main()
 {
+    // TODO why're you using struct keyword here?
     struct TextInfo text = {};
     struct stat buffer = {};
 
+    // TODO what if stat() fails?
     stat(TEXT, &buffer);//buffer.st_size unsigned long int
 
+    // TODO where do you checking error code?
     InitTextInfo(&text, buffer.st_size, sizeof(char*));
 
+    // TODO where do you checking error code?
     ScanText(&text, buffer.st_size);
 
+    // TODO where do you checking error code?
     InitAddressInfo(&text, text.nlines, sizeof(LineInfo));
 
+    // TODO where do you checking error code?
     GetFileSize(&text, buffer.st_size);
 
+    // TODO where do you checking error code?
     QuickSort(&text);
 
     PrintText(&text);
 
+    // TODO where do you checking error code?
     TextInfoDtor(text.text);
+    // TODO where do you checking error code?
     TextInfoDtor(text.addr);
 
     return 0;
 }
 ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem, int size_elem)
 {
+    // TODO what if calloc fails?
     text->text = (char*) calloc(elem, size_elem);
     return Ok;
 }
 
 ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem, int size_elem)
 {
+    // TODO what if calloc fails?
     text->addr = (LineInfo*) calloc(elem, size_elem);
     return Ok;
 }
@@ -91,6 +106,7 @@ ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem, int size_elem)
 ErrorCode TextInfoDtor (void* remove)
 {
     free(remove);
+    // TODO what purpose of doing that?
     remove = NULL;
     return Ok;
 }
@@ -99,10 +115,13 @@ ErrorCode ScanText(TextInfo* text, unsigned long size_f)
 {
     FILE* textfile = fopen (TEXT, "rb");
 
+    // TODO     +------- whitespace?
+    //          |
+    //         \/
     if (textfile== NULL)
     {
         printf("Cannot open file");
-        return Error;
+        return Error; // TODO you can specify error code (for example FILE_ERROR, CALLOC_ERROR, etc...)
     }
 
     if (fread (text->text, size_f, 1, textfile) == 0)
@@ -111,7 +130,7 @@ ErrorCode ScanText(TextInfo* text, unsigned long size_f)
         return Error;
     }
 
-    for (unsigned int i = 0; i < size_f; i++)
+    for (unsigned int i = 0; i < size_f; i++) // TODO what is i and size_f
     {
         if ((text->text)[i] =='\r')
         {
@@ -125,7 +144,7 @@ ErrorCode ScanText(TextInfo* text, unsigned long size_f)
 
 void PrintText(TextInfo* text)
 {
-    for (int ind = 0; ind < text->nlines; ind++)
+    for (int ind = 0; ind < text->nlines; ind++) // TODO ind?
     {
         printf ("%s\n", (text->addr)[ind].address);
     }
@@ -133,7 +152,8 @@ void PrintText(TextInfo* text)
 
 ErrorCode GetFileSize(TextInfo* text, unsigned long size_f)
 {
-    int str = 1;
+    int str = 1; // TODO it seems like you've been doing some self-development instead of typing 'ing'
+                 // And yes, I do NOT understand why the fuck variable with name 'str' has type int
     int len = 0;
     (text->addr)[0].address = text->text;
     for (unsigned int elem = 0; elem < size_f; elem++)
@@ -161,9 +181,10 @@ ErrorCode QuickSort (TextInfo* text)
 
     return Ok;
 }
+// TODO blank line
 ErrorCode BubbleSort (TextInfo* text)
 {
-    int str = text->nlines - 1;
+    int str = text->nlines - 1; // TODO WHY STR??????????
 
     while (str > 0)
     {
@@ -179,14 +200,39 @@ ErrorCode BubbleSort (TextInfo* text)
     }
     return Ok;
 }
+// TODO blank line
+// TODO is it suitable only for qsort?
 int CompareQSort (const void* elem1, const void* elem2)
 {
+    // TODO why so many brackets???
+    // ⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠛⢉⢉⠉⠉⠻⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⣿⣿⣿⣿⠟⠠⡰⣕⣗⣷⣧⣀⣅⠘⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⣿⣿⣿⠃⣠⣳⣟⣿⣿⣷⣿⡿⣜⠄⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⣿⡿⠁⠄⣳⢷⣿⣿⣿⣿⡿⣝⠖⠄⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⣿⠃⠄⢢⡹⣿⢷⣯⢿⢷⡫⣗⠍⢰⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⡏⢀⢄⠤⣁⠋⠿⣗⣟⡯⡏⢎⠁⢸⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⠄⢔⢕⣯⣿⣿⡲⡤⡄⡤⠄⡀⢠⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⠇⠠⡳⣯⣿⣿⣾⢵⣫⢎⢎⠆⢀⣿⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⠄⢨⣫⣿⣿⡿⣿⣻⢎⡗⡕⡅⢸⣿⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⠄⢜⢾⣾⣿⣿⣟⣗⢯⡪⡳⡀⢸⣿⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⠄⢸⢽⣿⣷⣿⣻⡮⡧⡳⡱⡁⢸⣿⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⡄⢨⣻⣽⣿⣟⣿⣞⣗⡽⡸⡐⢸⣿⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⡇⢀⢗⣿⣿⣿⣿⡿⣞⡵⡣⣊⢸⣿⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⡀⡣⣗⣿⣿⣿⣿⣯⡯⡺⣼⠎⣿⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⣧⠐⡵⣻⣟⣯⣿⣷⣟⣝⢞⡿⢹⣿⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⣿⡆⢘⡺⣽⢿⣻⣿⣗⡷⣹⢩⢃⢿⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⣿⣷⠄⠪⣯⣟⣿⢯⣿⣻⣜⢎⢆⠜⣿⣿⣿⣿⣿
+    // ⣿⣿⣿⣿⣿⡆⠄⢣⣻⣽⣿⣿⣟⣾⡮⡺⡸⠸⣿⣿⣿⣿
+    // ⣿⣿⡿⠛⠉⠁⠄⢕⡳⣽⡾⣿⢽⣯⡿⣮⢚⣅⠹⣿⣿⣿
+    // ⡿⠋⠄⠄⠄⠄⢀⠒⠝⣞⢿⡿⣿⣽⢿⡽⣧⣳⡅⠌⠻⣿
+    // ⠁⠄⠄⠄⠄⠄⠐⡐⠱⡱⣻⡻⣝⣮⣟⣿⣻⣟⣻⡺⣊
     return ReverseComparelines((((const LineInfo*)elem1)->address), (((const LineInfo*)elem2)->address),
                          (((const LineInfo*)elem1)->lineslen), (((const LineInfo*)elem2)->lineslen));
 }
+// TODO blank line
 int StraightComparelines (const char* s1, const char* s2, int len1, int len2)
 {
-     int elem1 = 0 , elem2 = 0;
+     int elem1 = 0, elem2 = 0; // TODO why elem???
 
     while (elem1 >= len1 && elem2 >= len2)
     {
