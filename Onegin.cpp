@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <sys/stat.h>
+#include <sys\stat.h>
 #include <assert.h>
-//#include <TXlib.h> // TODO TXlib must be the first include (pls read TXlib docs)
-                     // TODO and why do you need TXlb?
+#include <TXlib.h> // TODO TXlib must be the first include (pls read TXlib docs)
 
 #define TEXT "OneginText.txt" // TODO why define?
 
@@ -99,7 +98,7 @@ ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem, int size_elem)
 ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem, int size_elem)
 {
     // TODO what if calloc fails?
-    text->addr = (LineInfo*) calloc(elem, size_elem);
+    text->addr = (LineInfo*) calloc(elem, size_elem); // TODO why not sizeof(LineInfo)
     return Ok;
 }
 
@@ -130,7 +129,7 @@ ErrorCode ScanText(TextInfo* text, unsigned long size_f)
         return Error;
     }
 
-    for (unsigned int i = 0; i < size_f; i++) // TODO what is i and size_f
+    for (unsigned int i = 0; i < size_f; i++) // TODO what are i and size_f
     {
         if ((text->text)[i] =='\r')
         {
@@ -232,7 +231,7 @@ int CompareQSort (const void* elem1, const void* elem2)
 // TODO blank line
 int StraightComparelines (const char* s1, const char* s2, int len1, int len2)
 {
-     int elem1 = 0, elem2 = 0; // TODO why elem???
+     int elem1 = 0, elem2 = 0; // TODO why elem??? 5 whitespaces
 
     while (elem1 >= len1 && elem2 >= len2)
     {
@@ -259,6 +258,7 @@ int StraightComparelines (const char* s1, const char* s2, int len1, int len2)
     {
         return 0;
     }
+    // TODO blank line
     return elem1 - elem2;
 }
 int ReverseComparelines (const char* s1, const char* s2, int len1, int len2)
@@ -290,6 +290,7 @@ int ReverseComparelines (const char* s1, const char* s2, int len1, int len2)
     {
         return 0;
     }
+    // TODO blank line
     return elem1 - elem2;
 }
 
@@ -297,6 +298,7 @@ void Swap(void* swap1, void* swap2, size_t size)
 {
     for (size_t i = 0; i < size; i++)
     {
+        // TODO a?
         char a = *((char*) swap1 + i);
         *((char*) swap1 + i) = *((char*) swap2 + i);
         *((char*) swap2 + i) = a;
