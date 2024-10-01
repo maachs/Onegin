@@ -1,30 +1,34 @@
+#include <TXlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys\stat.h>
 #include <assert.h>
-#include <TXlib.h> // TODO TXlib must be the first include (pls read TXlib docs)
 
-#define TEXT "OneginText.txt" // TODO why define?
+static const char* TEXTFILE = "OneginText.txt";
 
 struct LineInfo
 {
     char* address;
-    int lineslen; // TODO you meant lines_len, didn't you?
+    int lineslen;
 };
 
 struct TextInfo
 {
     int nlines;
     char* text;
-    LineInfo* addr;
+    LineInfo* linesdata;
 };
 
 enum ErrorCode
 {
-    Error = 1, // TODO usually OK = 0 when dealing with error codes. 
-               // (Because in that case you can write "if (error_code) { error }" instead of "if (error_code != 1) { error }")
-    Ok = 0
+    FILE_ERROR = 2,
+    PIZDEC = 1,
+    ZAEBIS = 0,
+    READ_FILE_ERROR = 3,
+    CALLOC_ERROR = 4,
+    DTOR_ERROR = 5,
+    GETFILE_ERROR = 6
 };
 
 ErrorCode QuickSort (TextInfo* text);
@@ -39,171 +43,173 @@ int Comparelines (const char* s1, const char* s2, int len1, int len2);
 
 void Swap (void* swap1, void* swap2, size_t size);
 
-ErrorCode ScanText (TextInfo* text, unsigned long size_f);
+ErrorCode ScanText (TextInfo* text, unsigned long size_file);
 
 void PrintText (TextInfo* text);
 
-ErrorCode GetFileSize (TextInfo* text, unsigned long size_f);
+ErrorCode GetFileSize (TextInfo* text, unsigned long size_file);
 
 int CompareQSort (const void* s1, const void* s2);
 
-ErrorCode TextInfoDtor (void* remove);
-// TODO                                                  what's this? --------+
-//                                                                            |
-//                                                                           \/
-ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem, int size_elem );
+ErrorCode TextInfoDtor (TextInfo* text);
 
-ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem, int size_elem);
+ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem);
+
+ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem);
 
 int main()
 {
-    // TODO why're you using struct keyword here?
-    struct TextInfo text = {};
+    TextInfo text = {};
     struct stat buffer = {};
 
-    // TODO what if stat() fails?
-    stat(TEXT, &buffer);//buffer.st_size unsigned long int
+    stat(TEXTFILE, &buffer);
 
-    // TODO where do you checking error code?
-    InitTextInfo(&text, buffer.st_size, sizeof(char*));
+    if (InitTextInfo(&text, buffer.st_size) != ZAEBIS)
+    {
+        printf("InitText ERROR");
+        return CALLOC_ERROR;
+    }
 
-    // TODO where do you checking error code?
-    ScanText(&text, buffer.st_size);
+    if (ScanText(&text, buffer.st_size) != ZAEBIS)
+    {
+        printf("ScanText ERROR");
+        return PIZDEC;
+    }
 
-    // TODO where do you checking error code?
-    InitAddressInfo(&text, text.nlines, sizeof(LineInfo));
+    if (InitAddressInfo(&text, text.nlines) != ZAEBIS)
+    {
+        printf("InitAddress ERROR");
+        return CALLOC_ERROR;
+    }
 
-    // TODO where do you checking error code?
-    GetFileSize(&text, buffer.st_size);
+    if (GetFileSize(&text, buffer.st_size) != ZAEBIS)
+    {
+        printf("GetFileSize ERROR");
+        return GETFILE_ERROR;
+    }
 
-    // TODO where do you checking error code?
     QuickSort(&text);
 
     PrintText(&text);
-
-    // TODO where do you checking error code?
-    TextInfoDtor(text.text);
-    // TODO where do you checking error code?
-    TextInfoDtor(text.addr);
+    if (TextInfoDtor(&text) != ZAEBIS)
+    {
+        printf("TextInfoDtor ERROR");
+        return DTOR_ERROR;
+    }
 
     return 0;
 }
-ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem, int size_elem)
+ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem)
 {
-    // TODO what if calloc fails?
-    text->text = (char*) calloc(elem, size_elem);
-    return Ok;
+    text->text = (char*) calloc(elem, sizeof(char*));
+    return ZAEBIS;
 }
 
-ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem, int size_elem)
+ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem)
 {
-    // TODO what if calloc fails?
-    text->addr = (LineInfo*) calloc(elem, size_elem); // TODO why not sizeof(LineInfo)
-    return Ok;
+    text->linesdata = (LineInfo*) calloc(elem, sizeof(LineInfo));
+    return ZAEBIS;
 }
 
-ErrorCode TextInfoDtor (void* remove)
+ErrorCode TextInfoDtor (TextInfo* text)
 {
-    free(remove);
-    // TODO what purpose of doing that?
-    remove = NULL;
-    return Ok;
+    free(text->text);
+    text->text = NULL;
+
+    free(text->linesdata);
+    text->linesdata = NULL;
+    return ZAEBIS;
 }
 
-ErrorCode ScanText(TextInfo* text, unsigned long size_f)
+ErrorCode ScanText(TextInfo* text, unsigned long size_file)
 {
-    FILE* textfile = fopen (TEXT, "rb");
+    FILE* textfile = fopen (TEXTFILE, "rb");
 
-    // TODO     +------- whitespace?
-    //          |
-    //         \/
-    if (textfile== NULL)
+    if (textfile == NULL)
     {
         printf("Cannot open file");
-        return Error; // TODO you can specify error code (for example FILE_ERROR, CALLOC_ERROR, etc...)
+        return FILE_ERROR;
     }
 
-    if (fread (text->text, size_f, 1, textfile) == 0)
+    if (fread (text->text, size_file, 1, textfile) == 0)
     {
         printf("Cannot read file");
-        return Error;
+        return READ_FILE_ERROR;
     }
 
-    for (unsigned int i = 0; i < size_f; i++) // TODO what are i and size_f
+    for (unsigned int elem = 0; elem < size_file; elem++)
     {
-        if ((text->text)[i] =='\r')
+        if ((text->text)[elem] =='\r')
         {
-            (text->text)[i+1] = '\0';
-            (text->text)[i] = '\n';
+            (text->text)[elem+1] = '\0';
+            (text->text)[elem] = '\n';
             text->nlines++;
         }
     }
-    return Ok;
+    return ZAEBIS;
 }
 
 void PrintText(TextInfo* text)
 {
-    for (int ind = 0; ind < text->nlines; ind++) // TODO ind?
+    for (int str = 0; str < text->nlines; str++)
     {
-        printf ("%s\n", (text->addr)[ind].address);
+        printf ("%s\n", (text->linesdata)[str].address);
     }
 }
 
-ErrorCode GetFileSize(TextInfo* text, unsigned long size_f)
+ErrorCode GetFileSize(TextInfo* text, unsigned long size_file)
 {
-    int str = 1; // TODO it seems like you've been doing some self-development instead of typing 'ing'
-                 // And yes, I do NOT understand why the fuck variable with name 'str' has type int
+    int current_str = 1;
     int len = 0;
-    (text->addr)[0].address = text->text;
-    for (unsigned int elem = 0; elem < size_f; elem++)
+    (text->linesdata)[0].address = text->text;
+    for (unsigned int elem = 0; elem < size_file; elem++)
     {
         if (text->text[elem] == '\0')
         {
-            if (elem + 1 == size_f)
+            if (elem + 1 == size_file)
             {
                 break;
             }
-            text->addr[str].address = &(text->text[elem]) + 1;
-            text->addr[len].lineslen = text->addr[str].address - text->addr[str-1].address;
+            text->linesdata[current_str].address = &(text->text[elem]) + 1;
+            text->linesdata[len].lineslen = text->linesdata[current_str].address - text->linesdata[current_str-1].address;
 
             len++;
-            str++;
+            current_str++;
         }
     }
-    (text->addr)[text->nlines-1].lineslen = &(text->text[size_f]) - text->addr[text->nlines-1].address;
-    return Ok;
+    (text->linesdata)[text->nlines-1].lineslen = &(text->text[size_file]) - text->linesdata[text->nlines-1].address;
+
+    return ZAEBIS;
 }
 
 ErrorCode QuickSort (TextInfo* text)
 {
-    qsort(text->addr, text->nlines, sizeof(LineInfo), CompareQSort);
+    qsort(text->linesdata, text->nlines, sizeof(LineInfo), CompareQSort);
 
-    return Ok;
+    return ZAEBIS;
 }
-// TODO blank line
+
 ErrorCode BubbleSort (TextInfo* text)
 {
-    int str = text->nlines - 1; // TODO WHY STR??????????
+    int line = text->nlines - 1;
 
-    while (str > 0)
+    while (line > 0)
     {
-        for (int i = 0; i < str ; i++)
+        for (int str = 0; str < line ; str++)
         {
-            if (ReverseComparelines((text->addr)[i].address, (text->addr)[i+1].address, (text->addr)[i].lineslen, (text->addr)[i+1].lineslen) > 0)
+            if (ReverseComparelines((text->linesdata)[str].address, (text->linesdata)[str+1].address, (text->linesdata)[str].lineslen, (text->linesdata)[str+1].lineslen) > 0)
             {
-                Swap(&(text->addr)[i].address, &(text->addr)[i+1].address, sizeof(char**));
-                Swap(&(text->addr)[i].lineslen, &(text->addr)[i+1].lineslen, sizeof(int*));
+                Swap(&(text->linesdata)[str].address,  &(text->linesdata)[str+1].address, sizeof(char**));
+                Swap(&(text->linesdata)[str].lineslen, &(text->linesdata)[str+1].lineslen, sizeof(int*));
             }
         }
-        str--;
+        line--;
     }
-    return Ok;
+    return ZAEBIS;
 }
-// TODO blank line
-// TODO is it suitable only for qsort?
+
 int CompareQSort (const void* elem1, const void* elem2)
 {
-    // TODO why so many brackets???
     // ⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠛⢉⢉⠉⠉⠻⣿⣿⣿⣿⣿⣿
     // ⣿⣿⣿⣿⣿⣿⣿⠟⠠⡰⣕⣗⣷⣧⣀⣅⠘⣿⣿⣿⣿⣿
     // ⣿⣿⣿⣿⣿⣿⠃⣠⣳⣟⣿⣿⣷⣿⡿⣜⠄⣿⣿⣿⣿⣿
@@ -225,83 +231,81 @@ int CompareQSort (const void* elem1, const void* elem2)
     // ⣿⣿⡿⠛⠉⠁⠄⢕⡳⣽⡾⣿⢽⣯⡿⣮⢚⣅⠹⣿⣿⣿
     // ⡿⠋⠄⠄⠄⠄⢀⠒⠝⣞⢿⡿⣿⣽⢿⡽⣧⣳⡅⠌⠻⣿
     // ⠁⠄⠄⠄⠄⠄⠐⡐⠱⡱⣻⡻⣝⣮⣟⣿⣻⣟⣻⡺⣊
-    return ReverseComparelines((((const LineInfo*)elem1)->address), (((const LineInfo*)elem2)->address),
-                         (((const LineInfo*)elem1)->lineslen), (((const LineInfo*)elem2)->lineslen));
+    return ReverseComparelines(((const LineInfo*)elem1)->address,  ((const LineInfo*)elem2)->address,
+                               ((const LineInfo*)elem1)->lineslen, ((const LineInfo*)elem2)->lineslen);
 }
-// TODO blank line
+
 int StraightComparelines (const char* s1, const char* s2, int len1, int len2)
 {
-     int elem1 = 0, elem2 = 0; // TODO why elem??? 5 whitespaces
+    int elem_str1 = 0, elem_str2 = 0;
 
-    while (elem1 >= len1 && elem2 >= len2)
+    while (elem_str1 >= len1 && elem_str2 >= len2)
     {
-        while (isalpha(s1[elem1]) == 0)
+        while (isalpha(s1[elem_str1]) == 0)
         {
-            elem1++;
+            elem_str1++;
         }
-        while (isalpha(s2[elem2]) == 0)
+        while (isalpha(s2[elem_str2]) == 0)
         {
-            elem2++;
+            elem_str2++;
         }
 
-        if (tolower(s1[elem1]) != tolower(s2[elem2]))
+        if (tolower(s1[elem_str1]) != tolower(s2[elem_str2]))
         {
-            return (tolower(s1[elem1]) - tolower(s2[elem2]));
+            return (tolower(s1[elem_str1]) - tolower(s2[elem_str2]));
         }
         else
         {
-            elem1++;
-            elem2++;
+            elem_str1++;
+            elem_str2++;
         }
     }
-    if (elem1 < 0 && elem2 < 0)
+    if (elem_str1 < 0 && elem_str2 < 0)
     {
         return 0;
     }
-    // TODO blank line
-    return elem1 - elem2;
+
+    return elem_str1 - elem_str2;
 }
 int ReverseComparelines (const char* s1, const char* s2, int len1, int len2)
 {
-    int elem1 = len1 - 1 , elem2 = len2 - 1;
+    int elem_str1 = len1 - 1 , elem_str2 = len2 - 1;
 
-    while (elem1 >= 0 && elem2 >= 0)
+    while (elem_str1 >= 0 && elem_str2 >= 0)
     {
-        while (isalpha(s1[elem1]) == 0)
+        while (isalpha(s1[elem_str1]) == 0)
         {
-            elem1--;
+            elem_str1--;
         }
-        while (isalpha(s2[elem2]) == 0)
+        while (isalpha(s2[elem_str2]) == 0)
         {
-            elem2--;
+            elem_str2--;
         }
 
-        if (tolower(s1[elem1]) != tolower(s2[elem2]))
+        if (tolower(s1[elem_str1]) != tolower(s2[elem_str2]))
         {
-            return (tolower(s1[elem1]) - tolower(s2[elem2]));
+            return (tolower(s1[elem_str1]) - tolower(s2[elem_str2]));
         }
         else
         {
-            elem1--;
-            elem2--;
+            elem_str1--;
+            elem_str2--;
         }
     }
-    if (elem1 < 0 && elem2 < 0)
+    if (elem_str1 < 0 && elem_str2 < 0)
     {
         return 0;
     }
-    // TODO blank line
-    return elem1 - elem2;
+
+    return elem_str1 - elem_str2;
 }
 
 void Swap(void* swap1, void* swap2, size_t size)
 {
     for (size_t i = 0; i < size; i++)
     {
-        // TODO a?
-        char a = *((char*) swap1 + i);
+        char swap = *((char*) swap1 + i);
         *((char*) swap1 + i) = *((char*) swap2 + i);
-        *((char*) swap2 + i) = a;
+        *((char*) swap2 + i) = swap;
     }
 }
-
