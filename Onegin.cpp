@@ -1,11 +1,9 @@
-#include <TXlib.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys\stat.h>
 #include <assert.h>
-
-static const char* TEXTFILE = "OneginText.txt";
 
 struct LineInfo
 {
@@ -22,39 +20,27 @@ struct TextInfo
 
 enum ErrorCode
 {
-    FILE_ERROR = 2,
-    PIZDEC = 1,
-    ZAEBIS = 0,
+    FILE_ERROR      = 2,
+    SUCCESS         = 0,
     READ_FILE_ERROR = 3,
-    CALLOC_ERROR = 4,
-    DTOR_ERROR = 5,
-    GETFILE_ERROR = 6
+    CALLOC_ERROR    = 4,
+    DTOR_ERROR      = 5,
+    GETFILE_ERROR   = 6,
+    SCAN_ERROR      = 7
 };
 
 ErrorCode QuickSort (TextInfo* text);
-
 ErrorCode BubbleSort (TextInfo* text);
-
-int ReverseComparelines (const char* s1, const char* s2, int len1, int len2);
-
-int StraightComparelines (const char* s1, const char* s2, int len1, int len2);
-
-int Comparelines (const char* s1, const char* s2, int len1, int len2);
-
-void Swap (void* swap1, void* swap2, size_t size);
-
-ErrorCode ScanText (TextInfo* text, unsigned long size_file);
-
-void PrintText (TextInfo* text);
-
+int       ReverseComparelines (const char* s1, const char* s2, int len1, int len2);
+int       StraightComparelines (const char* s1, const char* s2, int len1, int len2);
+int       Comparelines (const char* s1, const char* s2, int len1, int len2);
+void      Swap (void* swap1, void* swap2, size_t size);
+ErrorCode ScanText (TextInfo* text, unsigned long size_file, const char* TEXT_FILE);
+void      PrintText (TextInfo* text);
 ErrorCode GetFileSize (TextInfo* text, unsigned long size_file);
-
-int CompareQSort (const void* s1, const void* s2);
-
+int       CompareQSort (const void* s1, const void* s2);
 ErrorCode TextInfoDtor (TextInfo* text);
-
 ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem);
-
 ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem);
 
 int main()
@@ -62,27 +48,29 @@ int main()
     TextInfo text = {};
     struct stat buffer = {};
 
-    stat(TEXTFILE, &buffer);
+    const char * TEXT_FILE = "OneginText.txt";
 
-    if (InitTextInfo(&text, buffer.st_size) != ZAEBIS)
+    stat(TEXT_FILE, &buffer);
+
+    if (InitTextInfo(&text, buffer.st_size) != SUCCESS)
     {
         printf("InitText ERROR");
         return CALLOC_ERROR;
     }
 
-    if (ScanText(&text, buffer.st_size) != ZAEBIS)
+    if (ScanText(&text, buffer.st_size, TEXT_FILE) != SUCCESS)
     {
         printf("ScanText ERROR");
-        return PIZDEC;
+        return SCAN_ERROR;
     }
 
-    if (InitAddressInfo(&text, text.nlines) != ZAEBIS)
+    if (InitAddressInfo(&text, text.nlines) != SUCCESS)
     {
         printf("InitAddress ERROR");
         return CALLOC_ERROR;
     }
 
-    if (GetFileSize(&text, buffer.st_size) != ZAEBIS)
+    if (GetFileSize(&text, buffer.st_size) != SUCCESS)
     {
         printf("GetFileSize ERROR");
         return GETFILE_ERROR;
@@ -91,7 +79,7 @@ int main()
     QuickSort(&text);
 
     PrintText(&text);
-    if (TextInfoDtor(&text) != ZAEBIS)
+    if (TextInfoDtor(&text) != SUCCESS)
     {
         printf("TextInfoDtor ERROR");
         return DTOR_ERROR;
@@ -101,14 +89,23 @@ int main()
 }
 ErrorCode InitTextInfo (TextInfo* text, unsigned long int elem)
 {
-    text->text = (char*) calloc(elem, sizeof(char*));
-    return ZAEBIS;
+    if ((text->text = (char*) calloc(elem, sizeof(char*))) == NULL)
+    {
+        return CALLOC_ERROR;
+    }
+
+    return SUCCESS;
 }
 
 ErrorCode InitAddressInfo(TextInfo* text, unsigned long int elem)
 {
     text->linesdata = (LineInfo*) calloc(elem, sizeof(LineInfo));
-    return ZAEBIS;
+    if (text->linesdata == NULL)
+    {
+        return CALLOC_ERROR;
+    }
+
+    return SUCCESS;
 }
 
 ErrorCode TextInfoDtor (TextInfo* text)
@@ -118,12 +115,13 @@ ErrorCode TextInfoDtor (TextInfo* text)
 
     free(text->linesdata);
     text->linesdata = NULL;
-    return ZAEBIS;
+
+    return SUCCESS;
 }
 
-ErrorCode ScanText(TextInfo* text, unsigned long size_file)
+ErrorCode ScanText(TextInfo* text, unsigned long size_file, const char* TEXT_FILE)
 {
-    FILE* textfile = fopen (TEXTFILE, "rb");
+    FILE* textfile = fopen (TEXT_FILE, "rb");
 
     if (textfile == NULL)
     {
@@ -139,21 +137,21 @@ ErrorCode ScanText(TextInfo* text, unsigned long size_file)
 
     for (unsigned int elem = 0; elem < size_file; elem++)
     {
-        if ((text->text)[elem] =='\r')
+        if (text->text[elem] =='\r')
         {
-            (text->text)[elem+1] = '\0';
-            (text->text)[elem] = '\n';
+            text->text[elem+1] = '\0';
+            text->text[elem] = '\n';
             text->nlines++;
         }
     }
-    return ZAEBIS;
+    return SUCCESS;
 }
 
 void PrintText(TextInfo* text)
 {
     for (int str = 0; str < text->nlines; str++)
     {
-        printf ("%s\n", (text->linesdata)[str].address);
+        printf ("%s\n", text->linesdata[str].address);
     }
 }
 
@@ -161,7 +159,9 @@ ErrorCode GetFileSize(TextInfo* text, unsigned long size_file)
 {
     int current_str = 1;
     int len = 0;
-    (text->linesdata)[0].address = text->text;
+
+    text->linesdata[0].address = text->text;
+
     for (unsigned int elem = 0; elem < size_file; elem++)
     {
         if (text->text[elem] == '\0')
@@ -171,7 +171,9 @@ ErrorCode GetFileSize(TextInfo* text, unsigned long size_file)
                 break;
             }
             text->linesdata[current_str].address = &(text->text[elem]) + 1;
-            text->linesdata[len].lineslen = text->linesdata[current_str].address - text->linesdata[current_str-1].address;
+
+            text->linesdata[len].lineslen =
+                text->linesdata[current_str].address - text->linesdata[current_str-1].address;
 
             len++;
             current_str++;
@@ -179,14 +181,14 @@ ErrorCode GetFileSize(TextInfo* text, unsigned long size_file)
     }
     (text->linesdata)[text->nlines-1].lineslen = &(text->text[size_file]) - text->linesdata[text->nlines-1].address;
 
-    return ZAEBIS;
+    return SUCCESS;
 }
 
 ErrorCode QuickSort (TextInfo* text)
 {
     qsort(text->linesdata, text->nlines, sizeof(LineInfo), CompareQSort);
 
-    return ZAEBIS;
+    return SUCCESS;
 }
 
 ErrorCode BubbleSort (TextInfo* text)
@@ -197,7 +199,8 @@ ErrorCode BubbleSort (TextInfo* text)
     {
         for (int str = 0; str < line ; str++)
         {
-            if (ReverseComparelines((text->linesdata)[str].address, (text->linesdata)[str+1].address, (text->linesdata)[str].lineslen, (text->linesdata)[str+1].lineslen) > 0)
+            if (ReverseComparelines((text->linesdata)[str].address,  (text->linesdata)[str+1].address,
+                                    (text->linesdata)[str].lineslen, (text->linesdata)[str+1].lineslen) > 0)
             {
                 Swap(&(text->linesdata)[str].address,  &(text->linesdata)[str+1].address, sizeof(char**));
                 Swap(&(text->linesdata)[str].lineslen, &(text->linesdata)[str+1].lineslen, sizeof(int*));
@@ -205,7 +208,7 @@ ErrorCode BubbleSort (TextInfo* text)
         }
         line--;
     }
-    return ZAEBIS;
+    return SUCCESS;
 }
 
 int CompareQSort (const void* elem1, const void* elem2)
@@ -302,10 +305,10 @@ int ReverseComparelines (const char* s1, const char* s2, int len1, int len2)
 
 void Swap(void* swap1, void* swap2, size_t size)
 {
-    for (size_t i = 0; i < size; i++)
+    for (size_t bytes = 0; bytes < size; bytes++)
     {
-        char swap = *((char*) swap1 + i);
-        *((char*) swap1 + i) = *((char*) swap2 + i);
-        *((char*) swap2 + i) = swap;
+        char swap = *((char*) swap1 + bytes);
+        *((char*) swap1 + bytes) = *((char*) swap2 + bytes);
+        *((char*) swap2 + bytes) = swap;
     }
 }
